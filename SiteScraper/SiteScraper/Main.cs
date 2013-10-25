@@ -26,7 +26,8 @@ namespace SiteScraper
 	{
 		public static void Main(string[] args)
 		{
-			Console.WriteLine("Hello World!");
+			SiteScraper scraper = new SiteScraper(args);
+			scraper.Scrape();
 		}
 	}
 }

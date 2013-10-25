@@ -19,14 +19,37 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using System;
+using System.Collections.Concurrent;
 
 namespace SiteScraper
 {
 	public class SiteScraper
 	{
-		public SiteScraper()
+		public SiteScraper(string[] args)
 		{
+			m_usage = string.Format("Usage: {0} [url,]",System.AppDomain.CurrentDomain.FriendlyName);
+			if (args.Length == 0)
+			{
+				System.Console.Error.WriteLine(m_usage);
+				Environment.Exit(-1);
+			}
+			m_args = args;
+			m_urlQueue = new ConcurrentQueue<string>(args);
 		}
+
+		public void Scrape()
+		{
+			string url;
+			while (!m_urlQueue.IsEmpty)
+			{
+				m_urlQueue.TryDequeue(out url);
+				SiteScraperUtility.Scrape(url, "");
+			}
+		}
+
+		string[] m_args;
+		ConcurrentQueue<string> m_urlQueue;
+		readonly string m_usage;
 	}
 }
 
