@@ -42,6 +42,7 @@
     <Compile Include="Main.cs" />
     <Compile Include="SiteScraperUtility.cs" />
     <Compile Include="SiteScraper.cs" />
+    <Compile Include="HtmlAgilityPackUtility.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
