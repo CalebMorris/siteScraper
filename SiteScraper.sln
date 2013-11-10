@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SiteScraper", "SiteScraper\SiteScraper.csproj", "{C53D4C2B-D2BA-4C9D-8C72-A295B96515E1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SiteScraper", "src\SiteScraper.csproj", "{C53D4C2B-D2BA-4C9D-8C72-A295B96515E1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +15,6 @@ Global
 		{C53D4C2B-D2BA-4C9D-8C72-A295B96515E1}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
-		StartupItem = SiteScraper\SiteScraper.csproj
+		StartupItem = src\SiteScraper.csproj
 	EndGlobalSection
 EndGlobal
