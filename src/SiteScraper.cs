@@ -51,7 +51,7 @@ namespace SiteScraper
 				if (!Directory.Exists(urlPathTuple.Item2))
 				{
 					System.Console.Error.WriteLine("The following path doesn't exist: {0}", urlPathTuple.Item2);
-					Environment.Exit(-1);
+					System.IO.Directory.CreateDirectory(urlPathTuple.Item2);
 				}
 				try
 				{
