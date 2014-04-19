@@ -51,7 +51,7 @@ namespace SiteScraper
 						return;
 					else
 					{
-						GetUrl((new Uri(uri, c_indexFileName)).ToString(), dataPath);
+						dataPath = GetUrl((new Uri(uri, c_indexFileName)).ToString(), dataPath);
 					}
 				}
 				else
@@ -112,14 +112,41 @@ namespace SiteScraper
 			}
 		}
 
-		static void GetUrl(string url, string path)
+		static string GetUrl(string url, string path)
 		{
-			//System.Console.Write("Downloading {0}", new Uri(url));
-			//System.Console.WriteLine(" to {0}", new Uri(path).AbsolutePath);
-			using(WebClient client = new WebClient())
+			HttpWebResponse response;
+			try
 			{
-				client.DownloadFile(url, path);
+				HttpWebRequest request = HttpWebRequest.Create(new UriBuilder(url).Uri) as HttpWebRequest;
+				request.UserAgent = "TurtleSpider/0.1";
+				using (response = request.GetResponse() as HttpWebResponse)
+				{
+					if (response.StatusCode == HttpStatusCode.OK)
+					{
+						using (Stream fileOut = File.Create(path))
+						using (Stream responseStream = response.GetResponseStream())
+						{
+							byte[] buffer = new byte[8 * 1024];
+							int len;
+							while ((len = responseStream.Read(buffer, 0, buffer.Length)) > 0)
+							{
+								fileOut.Write(buffer, 0, len);
+							}
+						}
+
+						return path;
+					}
+				}
 			}
+			catch (WebException ex)
+			{
+				response = ex.Response as HttpWebResponse;
+				if (response.StatusCode == HttpStatusCode.NotFound && response.ResponseUri.AbsoluteUri.EndsWith("index.html"))
+				{
+					return GetUrl(response.ResponseUri.Authority + "/index.php", path.Remove(path.Length - 4) + "php");
+				}
+			}
+			return default(string);
 		}
 
 		static List<string> GetLinks(string urlData, int depth)
