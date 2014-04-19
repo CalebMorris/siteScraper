@@ -4,6 +4,7 @@ I noticed a few wiki style websites that I attempted to visit lately had gone do
 
 Dependancies (Nuget):
 	HtmlAgilityPack
+	Command Line Parser Library
 
 To Build:
 	Simply download any missing nuget packages.
