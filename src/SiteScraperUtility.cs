@@ -26,12 +26,12 @@ namespace SiteScraper
 				string dataPath = null;
 				if (uri.AbsolutePath == "/")
 				{
-					dataPath = Path.Combine(path, c_indexFileName);
+					dataPath = Path.Combine(path, "base");
 					if (File.Exists(dataPath))
 						return;
 					else
 					{
-						dataPath = GetUrl((new Uri(uri, c_indexFileName)).ToString(), dataPath);
+						dataPath = GetUrl(uri.AbsoluteUri, dataPath);
 					}
 				}
 				else
@@ -103,6 +103,8 @@ namespace SiteScraper
 				{
 					if (response.StatusCode == HttpStatusCode.OK)
 					{
+						if (Directory.Exists(path))
+							path = Path.Combine(path, "root");
 						using (Stream fileOut = File.Create(path))
 						using (Stream responseStream = response.GetResponseStream())
 						{
@@ -214,7 +216,6 @@ namespace SiteScraper
 				filename = String.Format("{0}{1}", filename, c_noExtensionFile);
 		}
 
-		public const string c_indexFileName = "index.html";
 		public const string c_noExtensionFile = ".html";
 	}
 }
