@@ -101,34 +101,35 @@ namespace SiteScraper
 			while (!m_urlQueue.IsEmpty)
 			{
 				m_urlQueue.TryDequeue(out scrapePair);
+
 				if (!Directory.Exists(scrapePair.Path.AbsolutePath))
 				{
 					System.Console.Error.WriteLine("The following path doesn't exist: {0}", scrapePair.Path);
 					System.IO.Directory.CreateDirectory(scrapePair.Path.AbsolutePath);
 				}
-				try
-				{
-					if (scrapePair.Url.Scheme != Uri.UriSchemeHttp)
-						throw new UriFormatException("Scheme Not Supported: uri is not of the HTTP scheme.");
 
-					string siteDirectory = Path.Combine(scrapePair.Path.AbsolutePath, scrapePair.Url.Host.Split('.').Reverse().Skip(1).First());
-					if (!FileOrDirectoryExists(siteDirectory))
-						Directory.CreateDirectory(siteDirectory);
-					else
-					{
-						int i = 2;
-						while (FileOrDirectoryExists(string.Format("{0}({1})", siteDirectory, i)))
-							i++;
-						siteDirectory = string.Format("{0}({1})", siteDirectory, i);
-						Directory.CreateDirectory(siteDirectory);
-					}
-					Scrape(scrapePair.Url.AbsoluteUri, siteDirectory);
-				}
-				catch (UriFormatException e)
+				if (scrapePair.Url.Scheme != Uri.UriSchemeHttp)
 				{
-					System.Console.Error.WriteLine(e.Message);
-					Environment.Exit(-1);
+					Console.Error.WriteLine("Scheme Not Supported: uri '{0}' is not of the HTTP scheme.", scrapePair.Url.AbsoluteUri);
+					continue;
 				}
+
+				string siteDirectory = Path.Combine(scrapePair.Path.AbsolutePath, scrapePair.Url.Host.Split('.').Reverse().Skip(1).First());
+
+				if (!FileOrDirectoryExists(siteDirectory))
+				{
+					Directory.CreateDirectory(siteDirectory);
+				}
+				else
+				{
+					int i = 2;
+					while (FileOrDirectoryExists(string.Format("{0}({1})", siteDirectory, i)))
+						i++;
+					siteDirectory = string.Format("{0}({1})", siteDirectory, i);
+					Directory.CreateDirectory(siteDirectory);
+				}
+
+				Scrape(scrapePair.Url.AbsoluteUri, siteDirectory);
 			}
 		}
 
