@@ -130,30 +130,29 @@ namespace SiteScraper
 					Directory.CreateDirectory(siteDirectory);
 				}
 
-				Scrape(scrapePair.Url.AbsoluteUri, siteDirectory);
+				Scrape(scrapePair.Url, siteDirectory);
 			}
 		}
 
-		void Scrape(string url, string path)
+		void Scrape(Uri url, string path)
 		{
 			try
 			{
-				Uri uri = new Uri(url);
 				int depth = 0;
 				string dataPath = null;
-				if (uri.AbsolutePath == "/")
+				if (url.AbsolutePath == "/")
 				{
 					dataPath = Path.Combine(path, "base");
 					if (File.Exists(dataPath))
 						return;
 					else
 					{
-						dataPath = GetUrl(uri.AbsoluteUri, dataPath);
+						dataPath = GetUrl(url, dataPath);
 					}
 				}
 				else
 				{
-					string[] directory = uri.AbsolutePath.Split('/').Where(x => x != "").ToArray();
+					string[] directory = url.AbsolutePath.Split('/').Where(x => x != "").ToArray();
 					depth = directory.Length;
 					dataPath = dataPath ?? "";
 					foreach (string dir in directory.Reverse().Skip(1).Reverse())
@@ -189,9 +188,17 @@ namespace SiteScraper
 				{
 					if (resource.First() == '/')
 					{
-						string nextUrl = String.Format("{0}{1}{2}{3}", uri.Scheme, Uri.SchemeDelimiter, uri.Authority, resource);
-						//Console.WriteLine("nextUrl:{0}", nextUrl);
-						Scrape(nextUrl, path);
+						Uri nextUrl;
+						string urlInput = string.Format("{0}{1}{2}{3}", url.Scheme, Uri.SchemeDelimiter, url.Authority, resource);
+						if (Uri.TryCreate(urlInput, UriKind.Absolute, out nextUrl))
+						{
+							Scrape(nextUrl, path);
+						}
+						else
+						{
+							Console.Error.WriteLine("Link '{0}' was of incorrect form.", urlInput);
+							continue;
+						}
 					}
 					else
 					{
@@ -210,12 +217,12 @@ namespace SiteScraper
 			}
 		}
 
-		string GetUrl(string url, string path)
+		string GetUrl(Uri url, string path)
 		{
 			HttpWebResponse response;
 			try
 			{
-				HttpWebRequest request = HttpWebRequest.Create(new UriBuilder(url).Uri) as HttpWebRequest;
+				HttpWebRequest request = HttpWebRequest.Create(url) as HttpWebRequest;
 				request.UserAgent = "TurtleSpider/0.1";
 				using (response = request.GetResponse() as HttpWebResponse)
 				{
@@ -241,10 +248,10 @@ namespace SiteScraper
 			catch (WebException ex)
 			{
 				response = ex.Response as HttpWebResponse;
-				if (response.StatusCode == HttpStatusCode.NotFound && response.ResponseUri.AbsoluteUri.EndsWith("index.html"))
-				{
-					return GetUrl(response.ResponseUri.Authority + "/index.php", path.Remove(path.Length - 4) + "php");
-				}
+				if (response.StatusCode == HttpStatusCode.NotFound)
+					Console.Error.WriteLine("Link '{0}' not found.", url.AbsoluteUri);
+				else
+					throw ex;
 			}
 			return default(string);
 		}
