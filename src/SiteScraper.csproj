@@ -49,6 +49,7 @@
     <Compile Include="DirectoryTree.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Main.cs" />
+    <Compile Include="ScrapePair.cs" />
     <Compile Include="SiteScraper.cs" />
     <Compile Include="HtmlAgilityPackUtility.cs" />
   </ItemGroup>

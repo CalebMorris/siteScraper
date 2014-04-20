@@ -1,24 +1,9 @@
-//
-//  Program.cs
-//
-//  Author:
-//       Caleb Morris <caleb.morris.g@gmail.com>
-//
-//  Copyright (c) 2013 Caleb Morris
-//
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 using System;
+using System.Collections.Concurrent;
+using System.IO;
+using System.Linq;
+using CommandLine;
+using CommandLine.Text;
 
 namespace SiteScraper
 {
@@ -26,8 +11,153 @@ namespace SiteScraper
 	{
 		public static void Main(string[] args)
 		{
-			SiteScraper scraper = new SiteScraper(args);
-			scraper.Scrape();
+			ConcurrentQueue<ScrapePair> crawlQueue = new ConcurrentQueue<ScrapePair>();
+			Options options = new Options();
+			if (CommandLine.Parser.Default.ParseArguments(args, options))
+			{
+				if (options.Scrape)
+				{
+					if (options.Output != null && options.Paths != null)
+					{
+						Console.Error.WriteLine("Use either Output or Paths, but not both.");
+						Console.Error.WriteLine(options.GetUsage());
+						Environment.Exit(-1);
+					}
+
+					if (options.Urls != null && options.Paths != null && options.Urls.Length != options.Paths.Length)
+					{
+						Console.Error.WriteLine("The number of Paths must equal the number of Urls.");
+						Console.Error.WriteLine(options.GetUsage());
+						Environment.Exit(-1);
+					}
+				}
+				else
+				{
+					if (options.Output != null)
+						Console.WriteLine("Flag \"output\" not used in crawl mode. To scrape use \"--scrape\"");
+					if (options.Paths != null)
+						Console.WriteLine("Flag \"paths\" not used in crawl mode. To scrape use \"--scrape\"");
+				}
+				if (options.Output != null)
+				{
+					Uri output;
+
+					if (Uri.TryCreate(options.Output, UriKind.Absolute, out output))
+					{
+						for (int i = 0; i < options.Urls.Length; ++i)
+						{
+							Uri url;
+							if (Uri.TryCreate(options.Urls[i], UriKind.Absolute, out url))
+							{
+								crawlQueue.Enqueue(new ScrapePair(url, output));
+							}
+							else
+							{
+								Console.Error.WriteLine("Your url '{0}' was of incorrect form.", options.Urls[i]);
+								continue;
+							}
+						}
+					}
+					else
+					{
+						Console.Error.WriteLine("Your output path '{0}' was of incorrect form.", options.Output);
+						Environment.Exit(-1);
+					}
+				}
+				else
+				{
+					for (int i = 0; i < options.Urls.Length; ++i)
+					{
+						Uri url, path;
+						if (!Uri.TryCreate(options.Urls[i], UriKind.Absolute, out url))
+						{
+							Console.Error.WriteLine("Your url '{0}' was of incorrect form.", options.Urls[i]);
+							continue;
+						}
+						if (!Uri.TryCreate(options.Paths[i], UriKind.Absolute, out path))
+						{
+							Console.Error.WriteLine("Your path '{0}' was of incorrect form.", options.Paths[i]);
+							continue;
+						}
+						crawlQueue.Enqueue(new ScrapePair(url, path));
+					}
+				}
+			}
+			else
+			{
+				Environment.Exit(-1);
+			}
+
+			Start(crawlQueue, options.Scrape);
+		}
+
+		public static void Start(ConcurrentQueue<ScrapePair> crawlQueue, bool isScraping)
+		{
+			Console.WriteLine("pwd:{0}", Directory.GetCurrentDirectory());
+			ScrapePair scrapePair;
+			while (!crawlQueue.IsEmpty)
+			{
+				if (crawlQueue.TryDequeue(out scrapePair))
+				{
+					if (!Directory.Exists(scrapePair.Path.AbsolutePath))
+					{
+						Console.Error.WriteLine("The following path doesn't exist: {0}", scrapePair.Path);
+						System.IO.Directory.CreateDirectory(scrapePair.Path.AbsolutePath);
+					}
+
+					// TODO(cm): Add support of other schemes (Issue ID: 1)
+					if (scrapePair.Url.Scheme != Uri.UriSchemeHttp)
+					{
+						Console.Error.WriteLine("Scheme Not Supported: uri '{0}' is not of the HTTP scheme.", scrapePair.Url.AbsoluteUri);
+						continue;
+					}
+
+					string siteDirectory = Path.Combine(scrapePair.Path.AbsolutePath, scrapePair.Url.Host.Split('.').Reverse().Skip(1).First());
+
+					if (!SiteScraper.FileOrDirectoryExists(siteDirectory))
+					{
+						Directory.CreateDirectory(siteDirectory);
+					}
+					else
+					{
+						int i = 2;
+						while (SiteScraper.FileOrDirectoryExists(string.Format("{0}({1})", siteDirectory, i)))
+							i++;
+						siteDirectory = string.Format("{0}({1})", siteDirectory, i);
+						Directory.CreateDirectory(siteDirectory);
+					}
+
+					SiteScraper scraper = new SiteScraper(scrapePair, isScraping);
+					scraper.Scrape();
+				}
+				else
+				{
+					Console.Error.WriteLine("Unable to dequeue the next site.");
+					Environment.Exit(-1);
+				}
+			}
+		}
+
+		sealed class Options
+		{
+			[OptionArray('u', "urls", Required = true, HelpText = "Urls to crawl.")]
+			public string[] Urls { get; set; }
+
+			[OptionArray('p', "paths", HelpText = "Path to scrape site to. Will use a subfolder of the site name here. Requireds -s.")]
+			public string[] Paths { get; set; }
+
+			[Option('s', "scrape", HelpText = "Should scrape to directory.")]
+			public bool Scrape { get; set; }
+
+			[Option('o', "output", HelpText = "Single output path. Requires -s.")]
+			public string Output { get; set; }
+
+			[HelpOption('h', "help", HelpText = "Display this screen.")]
+			public string GetUsage()
+			{
+				return string.Format("Usage: {0} [[url path],]\n{1}", System.AppDomain.CurrentDomain.FriendlyName,
+					HelpText.AutoBuild(this, (HelpText current) => HelpText.DefaultParsingErrorsHandler(this, current)).ToString());
+			}
 		}
 	}
 }

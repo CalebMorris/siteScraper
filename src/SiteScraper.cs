@@ -1,137 +1,23 @@
 using System;
-using System.Collections.Concurrent;
-using System.IO;
 using System.Linq;
-using CommandLine;
-using CommandLine.Text;
 using System.Net;
 using System.Collections.Generic;
 using HtmlAgilityPack;
+using System.IO;
 
 namespace SiteScraper
 {
 	public sealed class SiteScraper
 	{
-		public SiteScraper(string[] args)
+		public SiteScraper(ScrapePair scrapePair, bool isScraping)
 		{
-			Options options = new Options();
-			if (CommandLine.Parser.Default.ParseArguments(args, options))
-			{
-				if (options.Scrape)
-				{
-					m_isScraping = true;
-
-					if (options.Output != null && options.Paths != null)
-					{
-						Console.Error.WriteLine("Use either Output or Paths, but not both.");
-						Console.Error.WriteLine(options.GetUsage());
-						Environment.Exit(-1);
-					}
-
-					if (options.Urls != null && options.Paths != null && options.Urls.Length != options.Paths.Length)
-					{
-						Console.Error.WriteLine("The number of Paths must equal the number of Urls.");
-						Console.Error.WriteLine(options.GetUsage());
-						Environment.Exit(-1);
-					}
-				}
-				else
-				{
-					if (options.Output != null)
-						Console.WriteLine("Flag \"output\" not used in crawl mode. To scrape use \"--scrape\"");
-					if (options.Paths != null)
-						Console.WriteLine("Flag \"paths\" not used in crawl mode. To scrape use \"--scrape\"");
-				}
-				m_urlQueue = new ConcurrentQueue<ScrapePair>();
-				if (options.Output != null)
-				{
-					Uri output;
-
-					if (Uri.TryCreate(options.Output, UriKind.Absolute, out output))
-					{
-						for (int i = 0; i < options.Urls.Length; ++i)
-						{
-							Uri url;
-							if (Uri.TryCreate(options.Urls[i], UriKind.Absolute, out url))
-							{
-								m_urlQueue.Enqueue(new ScrapePair(url, output));
-							}
-							else
-							{
-								Console.Error.WriteLine("Your url '{0}' was of incorrect form.", options.Urls[i]);
-								continue;
-							}
-						}
-					}
-					else
-					{
-						Console.Error.WriteLine("Your output path '{0}' was of incorrect form.", options.Output);
-						Environment.Exit(-1);
-					}
-				}
-				else
-				{
-					for (int i = 0; i < options.Urls.Length; ++i)
-					{
-						Uri url, path;
-						if (!Uri.TryCreate(options.Urls[i], UriKind.Absolute, out url))
-						{
-							Console.Error.WriteLine("Your url '{0}' was of incorrect form.", options.Urls[i]);
-							continue;
-						}
-						if (!Uri.TryCreate(options.Paths[i], UriKind.Absolute, out path))
-						{
-							Console.Error.WriteLine("Your path '{0}' was of incorrect form.", options.Paths[i]);
-							continue;
-						}
-						m_urlQueue.Enqueue(new ScrapePair(url, path));
-					}
-				}
-			}
-			else
-			{
-				Environment.Exit(-1);
-			}
+			m_scrapePair = scrapePair;
+			m_isScraping = isScraping;
 		}
 
 		public void Scrape()
 		{
-			Console.WriteLine("pwd:{0}", Directory.GetCurrentDirectory());
-			ScrapePair scrapePair;
-			while (!m_urlQueue.IsEmpty)
-			{
-				m_urlQueue.TryDequeue(out scrapePair);
-
-				if (!Directory.Exists(scrapePair.Path.AbsolutePath))
-				{
-					Console.Error.WriteLine("The following path doesn't exist: {0}", scrapePair.Path);
-					System.IO.Directory.CreateDirectory(scrapePair.Path.AbsolutePath);
-				}
-
-				// TODO(cm): Add support of other schemes (Issue ID: 1)
-				if (scrapePair.Url.Scheme != Uri.UriSchemeHttp)
-				{
-					Console.Error.WriteLine("Scheme Not Supported: uri '{0}' is not of the HTTP scheme.", scrapePair.Url.AbsoluteUri);
-					continue;
-				}
-
-				string siteDirectory = Path.Combine(scrapePair.Path.AbsolutePath, scrapePair.Url.Host.Split('.').Reverse().Skip(1).First());
-
-				if (!FileOrDirectoryExists(siteDirectory))
-				{
-					Directory.CreateDirectory(siteDirectory);
-				}
-				else
-				{
-					int i = 2;
-					while (FileOrDirectoryExists(string.Format("{0}({1})", siteDirectory, i)))
-						i++;
-					siteDirectory = string.Format("{0}({1})", siteDirectory, i);
-					Directory.CreateDirectory(siteDirectory);
-				}
-
-				Scrape(scrapePair.Url, siteDirectory);
-			}
+			Scrape(m_scrapePair.Url, m_scrapePair.Path.AbsolutePath);
 		}
 
 		void Scrape(Uri url, string path)
@@ -325,7 +211,7 @@ namespace SiteScraper
 			return resources;
 		}
 
-		bool FileOrDirectoryExists(string name)
+		public static bool FileOrDirectoryExists(string name)
 		{
 			return (Directory.Exists(name) || File.Exists(name));
 		}
@@ -341,52 +227,11 @@ namespace SiteScraper
 				filename = String.Format("{0}{1}", filename, c_noExtensionFile);
 		}
 
-		public const string c_noExtensionFile = ".html";
-
 		public bool IsScraping { get { return m_isScraping; } }
 
-		ConcurrentQueue<ScrapePair> m_urlQueue;
+		public const string c_noExtensionFile = ".html";
 		readonly bool m_isScraping;
-
-		sealed class ScrapePair
-		{
-			public ScrapePair(Uri url, Uri path)
-			{
-				m_url = url;
-				m_path = path;
-			}
-
-			public Uri Url { get { return m_url; } }
-			public Uri Path { get { return m_path; } }
-
-			Uri m_url;
-			Uri m_path;
-		}
-
-		sealed class Options
-		{
-			[OptionArray('u', "urls", Required = true, HelpText = "Urls to crawl.")]
-			public string[] Urls { get; set; }
-
-			[OptionArray('p', "paths", HelpText = "Path to scrape site to. Will use a subfolder of the site name here. Requireds -s.")]
-			public string[] Paths { get; set; }
-
-			[Option('s', "scrape", HelpText = "Should scrape to directory.")]
-			public bool Scrape { get; set; }
-
-			[Option('o', "output", HelpText = "Single output path. Requires -s.")]
-			public string Output { get; set; }
-
-			[HelpOption('h', "help", HelpText = "Display this screen.")]
-			public string GetUsage()
-			{
-
-
-
-				return string.Format("Usage: {0} [[url path],]\n{1}", System.AppDomain.CurrentDomain.FriendlyName, 
-					HelpText.AutoBuild(this, (HelpText current) => HelpText.DefaultParsingErrorsHandler(this, current)).ToString());
-			}
-		}
+		readonly ScrapePair m_scrapePair;
 	}
 }
 
