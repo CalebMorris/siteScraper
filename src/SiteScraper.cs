@@ -57,23 +57,17 @@ namespace SiteScraper
 			while (!m_urlQueue.IsEmpty)
 			{
 				m_urlQueue.TryDequeue(out urlPathTuple);
-				if (!Directory.Exists(urlPathTuple.Path))
+				if (!Directory.Exists(urlPathTuple.Path.AbsolutePath))
 				{
 					System.Console.Error.WriteLine("The following path doesn't exist: {0}", urlPathTuple.Path);
-					System.IO.Directory.CreateDirectory(urlPathTuple.Path);
+					System.IO.Directory.CreateDirectory(urlPathTuple.Path.AbsolutePath);
 				}
 				try
 				{
-					Uri uri = null;
-					if (!urlPathTuple.Url.StartsWith("http"))
-						uri = new Uri(string.Format("http://{0}", urlPathTuple.Url));
-					else
-						uri = new Uri(urlPathTuple.Url);
-
-					if (uri.Scheme != Uri.UriSchemeHttp)
+					if (urlPathTuple.Url.Scheme != Uri.UriSchemeHttp)
 						throw new UriFormatException("Scheme Not Supported: uri is not of the HTTP scheme.");
 
-					string siteDirectory = Path.Combine(urlPathTuple.Path, uri.Host.Split('.').Reverse().Skip(1).First());
+					string siteDirectory = Path.Combine(urlPathTuple.Path.AbsolutePath, urlPathTuple.Url.Host.Split('.').Reverse().Skip(1).First());
 					if (!FileOrDirectoryExists(siteDirectory))
 						Directory.CreateDirectory(siteDirectory);
 					else
@@ -84,9 +78,7 @@ namespace SiteScraper
 						siteDirectory = string.Format("{0}({1})", siteDirectory, i);
 						Directory.CreateDirectory(siteDirectory);
 					}
-					Scrape(
-						urlPathTuple.Url,
-						siteDirectory);
+					Scrape(urlPathTuple.Url.AbsoluteUri, siteDirectory);
 				}
 				catch (UriFormatException e)
 				{
@@ -306,17 +298,17 @@ namespace SiteScraper
 
 		sealed class ScrapePair
 		{
-			public ScrapePair(string url, string path)
+			public ScrapePair(Uri url, Uri path)
 			{
 				m_url = url;
 				m_path = path;
 			}
 
-			public string Url { get { return m_url; } }
-			public string Path { get { return m_path; } }
+			public Uri Url { get { return m_url; } }
+			public Uri Path { get { return m_path; } }
 
-			string m_url;
-			string m_path;
+			Uri m_url;
+			Uri m_path;
 		}
 
 		sealed class Options
