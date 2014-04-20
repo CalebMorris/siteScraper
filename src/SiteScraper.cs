@@ -10,7 +10,7 @@ using HtmlAgilityPack;
 
 namespace SiteScraper
 {
-	public class SiteScraper
+	public sealed class SiteScraper
 	{
 		public SiteScraper(string[] args)
 		{
@@ -96,7 +96,7 @@ namespace SiteScraper
 
 		public void Scrape()
 		{
-			System.Console.WriteLine("pwd:{0}", Directory.GetCurrentDirectory());
+			Console.WriteLine("pwd:{0}", Directory.GetCurrentDirectory());
 			ScrapePair scrapePair;
 			while (!m_urlQueue.IsEmpty)
 			{
@@ -104,10 +104,11 @@ namespace SiteScraper
 
 				if (!Directory.Exists(scrapePair.Path.AbsolutePath))
 				{
-					System.Console.Error.WriteLine("The following path doesn't exist: {0}", scrapePair.Path);
+					Console.Error.WriteLine("The following path doesn't exist: {0}", scrapePair.Path);
 					System.IO.Directory.CreateDirectory(scrapePair.Path.AbsolutePath);
 				}
 
+				// TODO(cm): Add support of other schemes (Issue ID: 1)
 				if (scrapePair.Url.Scheme != Uri.UriSchemeHttp)
 				{
 					Console.Error.WriteLine("Scheme Not Supported: uri '{0}' is not of the HTTP scheme.", scrapePair.Url.AbsoluteUri);
@@ -137,10 +138,6 @@ namespace SiteScraper
 		{
 			try
 			{
-				// Full path of saved file should be path+url(after top level domain)
-				//System.Console.WriteLine("Scraping url:{0}\n\tto Path:{1}", url, path);
-
-				// Check if this portion has already completed
 				Uri uri = new Uri(url);
 				int depth = 0;
 				string dataPath = null;
@@ -165,7 +162,7 @@ namespace SiteScraper
 						string currentLevel = (new Uri(Path.Combine(path, dataPath))).AbsolutePath;
 						if (!FileOrDirectoryExists(currentLevel))
 						{
-							System.Console.WriteLine("Creating Dir:@{1}:{0}", currentLevel, new System.Diagnostics.StackTrace(true).GetFrame(0).GetFileLineNumber());
+							Console.WriteLine("Creating Dir:@{1}:{0}", currentLevel, new System.Diagnostics.StackTrace(true).GetFrame(0).GetFileLineNumber());
 							Directory.CreateDirectory(currentLevel);
 						}
 					}
@@ -175,7 +172,7 @@ namespace SiteScraper
 					dataPath = Path.Combine(path, Path.Combine(dataPath, filename));
 					if (File.Exists(dataPath))
 					{
-						System.Console.Error.WriteLine("{0} already exists", dataPath);
+						Console.Error.WriteLine("{0} already exists", dataPath);
 						return;
 					}
 					else
@@ -193,7 +190,7 @@ namespace SiteScraper
 					if (resource.First() == '/')
 					{
 						string nextUrl = String.Format("{0}{1}{2}{3}", uri.Scheme, Uri.SchemeDelimiter, uri.Authority, resource);
-						//System.Console.WriteLine("nextUrl:{0}", nextUrl);
+						//Console.WriteLine("nextUrl:{0}", nextUrl);
 						Scrape(nextUrl, path);
 					}
 					else
