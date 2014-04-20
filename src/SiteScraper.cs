@@ -97,21 +97,21 @@ namespace SiteScraper
 		public void Scrape()
 		{
 			System.Console.WriteLine("pwd:{0}", Directory.GetCurrentDirectory());
-			ScrapePair urlPathTuple;
+			ScrapePair scrapePair;
 			while (!m_urlQueue.IsEmpty)
 			{
-				m_urlQueue.TryDequeue(out urlPathTuple);
-				if (!Directory.Exists(urlPathTuple.Path.AbsolutePath))
+				m_urlQueue.TryDequeue(out scrapePair);
+				if (!Directory.Exists(scrapePair.Path.AbsolutePath))
 				{
-					System.Console.Error.WriteLine("The following path doesn't exist: {0}", urlPathTuple.Path);
-					System.IO.Directory.CreateDirectory(urlPathTuple.Path.AbsolutePath);
+					System.Console.Error.WriteLine("The following path doesn't exist: {0}", scrapePair.Path);
+					System.IO.Directory.CreateDirectory(scrapePair.Path.AbsolutePath);
 				}
 				try
 				{
-					if (urlPathTuple.Url.Scheme != Uri.UriSchemeHttp)
+					if (scrapePair.Url.Scheme != Uri.UriSchemeHttp)
 						throw new UriFormatException("Scheme Not Supported: uri is not of the HTTP scheme.");
 
-					string siteDirectory = Path.Combine(urlPathTuple.Path.AbsolutePath, urlPathTuple.Url.Host.Split('.').Reverse().Skip(1).First());
+					string siteDirectory = Path.Combine(scrapePair.Path.AbsolutePath, scrapePair.Url.Host.Split('.').Reverse().Skip(1).First());
 					if (!FileOrDirectoryExists(siteDirectory))
 						Directory.CreateDirectory(siteDirectory);
 					else
@@ -122,7 +122,7 @@ namespace SiteScraper
 						siteDirectory = string.Format("{0}({1})", siteDirectory, i);
 						Directory.CreateDirectory(siteDirectory);
 					}
-					Scrape(urlPathTuple.Url.AbsoluteUri, siteDirectory);
+					Scrape(scrapePair.Url.AbsoluteUri, siteDirectory);
 				}
 				catch (UriFormatException e)
 				{
