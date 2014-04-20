@@ -19,6 +19,8 @@ namespace SiteScraper
 			{
 				if (options.Scrape)
 				{
+					m_isScraping = true;
+
 					if (options.Output != null && options.Paths != null)
 					{
 						Console.Error.WriteLine("Use either Output or Paths, but not both.");
@@ -41,8 +43,50 @@ namespace SiteScraper
 						Console.WriteLine("Flag \"paths\" not used in crawl mode. To scrape use \"--scrape\"");
 				}
 				m_urlQueue = new ConcurrentQueue<ScrapePair>();
-				for (int i = 0; i < options.Urls.Length; i += 2)
-					m_urlQueue.Enqueue(new ScrapePair(options.Urls[i], options.Output != null ? options.Output : options.Paths[i]));
+				if (options.Output != null)
+				{
+					Uri output;
+
+					if (Uri.TryCreate(options.Output, UriKind.Absolute, out output))
+					{
+						for (int i = 0; i < options.Urls.Length; ++i)
+						{
+							Uri url;
+							if (Uri.TryCreate(options.Urls[i], UriKind.Absolute, out url))
+							{
+								m_urlQueue.Enqueue(new ScrapePair(url, output));
+							}
+							else
+							{
+								Console.Error.WriteLine("Your url '{0}' was of incorrect form.", options.Urls[i]);
+								continue;
+							}
+						}
+					}
+					else
+					{
+						Console.Error.WriteLine("Your output path '{0}' was of incorrect form.", options.Output);
+						Environment.Exit(-1);
+					}
+				}
+				else
+				{
+					for (int i = 0; i < options.Urls.Length; ++i)
+					{
+						Uri url, path;
+						if (!Uri.TryCreate(options.Urls[i], UriKind.Absolute, out url))
+						{
+							Console.Error.WriteLine("Your url '{0}' was of incorrect form.", options.Urls[i]);
+							continue;
+						}
+						if (!Uri.TryCreate(options.Paths[i], UriKind.Absolute, out path))
+						{
+							Console.Error.WriteLine("Your path '{0}' was of incorrect form.", options.Paths[i]);
+							continue;
+						}
+						m_urlQueue.Enqueue(new ScrapePair(url, path));
+					}
+				}
 			}
 			else
 			{
@@ -294,7 +338,10 @@ namespace SiteScraper
 
 		public const string c_noExtensionFile = ".html";
 
+		public bool IsScraping { get { return m_isScraping; } }
+
 		ConcurrentQueue<ScrapePair> m_urlQueue;
+		readonly bool m_isScraping;
 
 		sealed class ScrapePair
 		{
