@@ -22,11 +22,10 @@ namespace SiteScraper
 			DirectoryInfo output = new DirectoryInfo(m_scrapePair.Path.AbsolutePath);
 			string scrapeFolder = m_isScraping
 				? (new Uri(Path.Combine(m_scrapePair.Path.AbsolutePath, m_scrapePair.Url.Authority))).AbsolutePath
-				: (new Uri(Path.Combine(Path.GetTempPath(), AppDomain.CurrentDomain.FriendlyName, Path.GetRandomFileName()))).AbsolutePath ;
+				: (new Uri(Path.Combine(Path.GetTempPath(), AppDomain.CurrentDomain.FriendlyName, Path.GetRandomFileName()))).AbsolutePath;
 			string basePath;
 			if (!FileOrDirectoryExists(scrapeFolder))
 			{
-				Directory.CreateDirectory(scrapeFolder);
 				basePath = scrapeFolder;
 			}
 			else
@@ -35,8 +34,12 @@ namespace SiteScraper
 				basePath = scrapeFolder + "(" + duplicateCount.ToString() + ")";
 				while (FileOrDirectoryExists(basePath))
 					basePath = scrapeFolder + "(" + (++duplicateCount).ToString() + ")";
-				Directory.CreateDirectory(basePath);
 			}
+
+			Directory.CreateDirectory(basePath);
+
+			Console.CancelKeyPress += delegate { CleanUpDirectoryIfNecessary(basePath); };
+
 			try
 			{
 				if (m_scrapePair.Url.AbsolutePath == "/")
@@ -86,17 +89,7 @@ namespace SiteScraper
 			}
 			finally
 			{
-				// Clean up if not scraping
-				if (!IsScraping)
-				{
-					Console.WriteLine("Cleanup up directory '{0}'", basePath);
-					DirectoryInfo directory = new DirectoryInfo(basePath);
-					foreach (FileInfo file in directory.GetFiles())
-						file.Delete();
-					foreach (DirectoryInfo subDirectory in directory.GetDirectories())
-						subDirectory.Delete(true);
-					directory.Delete();
-				}
+				CleanUpDirectoryIfNecessary(basePath);
 			}
 		}
 
@@ -305,6 +298,23 @@ namespace SiteScraper
 		{
 			if (!HasAFileExtension(filename))
 				filename = String.Format("{0}{1}", filename, c_noExtensionFile);
+		}
+
+		void CleanUpDirectoryIfNecessary(string path)
+		{
+			if (IsScraping || !FileOrDirectoryExists(path))
+				return;
+
+			Console.WriteLine("Cleanup up directory '{0}'", path);
+			DirectoryInfo directory = new DirectoryInfo(path);
+
+			foreach (FileInfo file in directory.GetFiles())
+				file.Delete();
+
+			foreach (DirectoryInfo subDirectory in directory.GetDirectories())
+				subDirectory.Delete(true);
+
+			directory.Delete();
 		}
 
 		public bool IsScraping { get { return m_isScraping; } }
