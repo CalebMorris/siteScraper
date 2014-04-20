@@ -8,12 +8,26 @@ namespace SiteScraper
 {
 	sealed class DirectoryTree
 	{
+		public DirectoryTree()
+		{
+			m_root = null;
+			m_nodes = new SortedSet<DirectoryTreeNode>();
+		}
+
 		public DirectoryTree(DirectoryTreeNode root)
 		{
 			m_root = root;
 
 			m_nodes = new SortedSet<DirectoryTreeNode>();
 			m_nodes.Add(root);
+		}
+
+		public bool AddLink(DirectoryTreeNode node)
+		{
+			if (m_nodes.Contains(node))
+				return false;
+
+			return m_nodes.Add(node);
 		}
 
 		/// <summary>
@@ -27,8 +41,8 @@ namespace SiteScraper
 		{
 			if (path == null)
 				throw new ArgumentNullException("path");
-			if (!m_nodes.Contains(origin))
-				throw new ArgumentException("Origin doesn't currently exist. Cannot be the origin of this new link.");
+			if (origin == null && m_root != null)
+				throw new ArgumentNullException("origin");
 
 			Uri outUri;
 			if (Uri.TryCreate(path, UriKind.Absolute, out outUri))
@@ -48,7 +62,9 @@ namespace SiteScraper
 				}
 				else
 				{
-					origin.Links.Add(path, newNode);
+					if (origin != null)
+						origin.Links.Add(path, newNode);
+
 					m_nodes.Add(newNode);
 					return newNode;
 				}

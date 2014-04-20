@@ -13,11 +13,91 @@ namespace SiteScraper
 		{
 			m_scrapePair = scrapePair;
 			m_isScraping = isScraping;
+			m_directoryTree = new DirectoryTree();
 		}
 
 		public void Scrape()
 		{
-			Scrape(m_scrapePair.Url, m_scrapePair.Path.AbsolutePath);
+			DirectoryTreeNode node = null;
+			DirectoryInfo output = new DirectoryInfo(m_scrapePair.Path.AbsolutePath);
+			string scrapeFolder = m_isScraping
+				? (new Uri(Path.Combine(m_scrapePair.Path.AbsolutePath, m_scrapePair.Url.Authority))).AbsolutePath
+				: (new Uri(Path.Combine(Path.GetTempPath(), AppDomain.CurrentDomain.FriendlyName, Path.GetRandomFileName()))).AbsolutePath ;
+			string basePath;
+			if (!FileOrDirectoryExists(scrapeFolder))
+			{
+				Directory.CreateDirectory(scrapeFolder);
+				basePath = scrapeFolder;
+			}
+			else
+			{
+				int duplicateCount = 1;
+				basePath = scrapeFolder + "(" + duplicateCount.ToString() + ")";
+				while (FileOrDirectoryExists(basePath))
+					basePath = scrapeFolder + "(" + (++duplicateCount).ToString() + ")";
+				Directory.CreateDirectory(basePath);
+			}
+			try
+			{
+				if (m_scrapePair.Url.AbsolutePath == "/")
+				{
+					Uri root = new Uri(Path.Combine(basePath, "base"));
+					if (File.Exists(root.AbsolutePath))
+					{
+						Console.Error.WriteLine("File '{0}' already exists.", root.AbsolutePath);
+						return;
+					}
+					else
+					{
+						node = GetUrl(m_scrapePair.Url, root.AbsolutePath);
+					}
+				}
+
+				m_directoryTree.AddLink(node);
+
+				List<string> resources = GetLinks(node.Path.AbsolutePath, 0);
+
+				foreach (string resource in resources)
+				{
+					if (resource.First() == '/')
+					{
+						Uri nextUrl;
+						string urlInput = string.Format("{0}{1}{2}{3}", m_scrapePair.Url.Scheme, Uri.SchemeDelimiter, m_scrapePair.Url.Authority, resource);
+						if (Uri.TryCreate(urlInput, UriKind.Absolute, out nextUrl))
+						{
+							Scrape(nextUrl, basePath);
+						}
+						else
+						{
+							Console.Error.WriteLine("Link '{0}' was of incorrect form.", urlInput);
+							continue;
+						}
+					}
+					else
+					{
+						//File that is an outside resource
+					}
+				}
+			}
+			catch (WebException ex)
+			{
+				Console.WriteLine(ex.Message);
+				throw;
+			}
+			finally
+			{
+				// Clean up if not scraping
+				if (!IsScraping)
+				{
+					Console.WriteLine("Cleanup up directory '{0}'", basePath);
+					DirectoryInfo directory = new DirectoryInfo(basePath);
+					foreach (FileInfo file in directory.GetFiles())
+						file.Delete();
+					foreach (DirectoryInfo subDirectory in directory.GetDirectories())
+						subDirectory.Delete(true);
+					directory.Delete();
+				}
+			}
 		}
 
 		void Scrape(Uri url, string path)
@@ -26,17 +106,7 @@ namespace SiteScraper
 			{
 				int depth = 0;
 				string dataPath = null;
-				if (url.AbsolutePath == "/")
-				{
-					dataPath = Path.Combine(path, "base");
-					if (File.Exists(dataPath))
-						return;
-					else
-					{
-						dataPath = GetUrl(url, dataPath);
-					}
-				}
-				else
+				if (url.AbsolutePath != "/")
 				{
 					string[] directory = url.AbsolutePath.Split('/').Where(x => x != "").ToArray();
 					depth = directory.Length;
@@ -66,6 +136,11 @@ namespace SiteScraper
 							depth = directory.Length - 1;
 						GetUrl(url, dataPath);
 					}
+				}
+				else
+				{
+					Console.Error.WriteLine("Attempting to retrieve root again.");
+					return;
 				}
 
 				List<string> resources = GetLinks(dataPath, depth);
@@ -103,8 +178,9 @@ namespace SiteScraper
 			}
 		}
 
-		string GetUrl(Uri url, string path)
+		DirectoryTreeNode GetUrl(Uri url, string path)
 		{
+			HttpStatusCode status;
 			HttpWebResponse response;
 			try
 			{
@@ -112,6 +188,7 @@ namespace SiteScraper
 				request.UserAgent = "TurtleSpider/0.1";
 				using (response = request.GetResponse() as HttpWebResponse)
 				{
+					status = response.StatusCode;
 					if (response.StatusCode == HttpStatusCode.OK)
 					{
 						if (Directory.Exists(path))
@@ -126,20 +203,23 @@ namespace SiteScraper
 								fileOut.Write(buffer, 0, len);
 							}
 						}
-
-						return path;
 					}
 				}
 			}
 			catch (WebException ex)
 			{
 				response = ex.Response as HttpWebResponse;
+				status = response.StatusCode;
 				if (response.StatusCode == HttpStatusCode.NotFound)
 					Console.Error.WriteLine("Link '{0}' not found.", url.AbsoluteUri);
 				else
 					throw ex;
 			}
-			return default(string);
+			Uri newUri;
+			if (Uri.TryCreate(path, UriKind.Absolute, out newUri))
+				return new DirectoryTreeNode(newUri, status);
+			else
+				throw new UriFormatException("New path isn't a well formed URI.");
 		}
 
 		List<string> GetLinks(string urlData, int depth)
@@ -232,6 +312,7 @@ namespace SiteScraper
 		public const string c_noExtensionFile = ".html";
 		readonly bool m_isScraping;
 		readonly ScrapePair m_scrapePair;
+		readonly DirectoryTree m_directoryTree;
 	}
 }
 

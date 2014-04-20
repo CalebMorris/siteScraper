@@ -112,21 +112,6 @@ namespace SiteScraper
 						continue;
 					}
 
-					string siteDirectory = Path.Combine(scrapePair.Path.AbsolutePath, scrapePair.Url.Host.Split('.').Reverse().Skip(1).First());
-
-					if (!SiteScraper.FileOrDirectoryExists(siteDirectory))
-					{
-						Directory.CreateDirectory(siteDirectory);
-					}
-					else
-					{
-						int i = 2;
-						while (SiteScraper.FileOrDirectoryExists(string.Format("{0}({1})", siteDirectory, i)))
-							i++;
-						siteDirectory = string.Format("{0}({1})", siteDirectory, i);
-						Directory.CreateDirectory(siteDirectory);
-					}
-
 					SiteScraper scraper = new SiteScraper(scrapePair, isScraping);
 					scraper.Scrape();
 				}
