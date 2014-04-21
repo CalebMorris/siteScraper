@@ -16,7 +16,7 @@ namespace SiteScraper
 		public Uri Url { get { return m_url; } }
 		public Uri Path { get { return m_path; } }
 
-		Uri m_url;
-		Uri m_path;
+		readonly Uri m_url;
+		readonly Uri m_path;
 	}
 }
