@@ -149,7 +149,7 @@ namespace SiteScraper
 
 				foreach (string resource in resources)
 				{
-					if (resource.First() == '/')
+					if (!string.IsNullOrEmpty(resource) && resource.First() == '/')
 					{
 						Uri nextUrl;
 						string urlInput = string.Format("{0}{1}{2}{3}", url.Scheme, Uri.SchemeDelimiter, url.Authority, resource);
