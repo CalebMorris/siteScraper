@@ -64,7 +64,7 @@ namespace SiteScraper
 						Environment.Exit(-1);
 					}
 				}
-				else
+				else if (options.Paths != null)
 				{
 					for (int i = 0; i < options.Urls.Length; ++i)
 					{
@@ -80,6 +80,19 @@ namespace SiteScraper
 							continue;
 						}
 						crawlQueue.Enqueue(new ScrapePair(url, path));
+					}
+				}
+				else
+				{
+					for (int i = 0; i < options.Urls.Length; ++i)
+					{
+						Uri url;
+						if (!Uri.TryCreate(options.Urls[i], UriKind.Absolute, out url))
+						{
+							Console.Error.WriteLine("Your url '{0}' was of incorrect form.", options.Urls[i]);
+							continue;
+						}
+						crawlQueue.Enqueue(new ScrapePair(url, null));
 					}
 				}
 			}
