@@ -19,7 +19,6 @@ namespace SiteScraper
 		public void Scrape()
 		{
 			DirectoryTreeNode node = null;
-			DirectoryInfo output = new DirectoryInfo(m_scrapePair.Path.AbsolutePath);
 			string scrapeFolder = m_isScraping
 				? (new Uri(Path.Combine(m_scrapePair.Path.AbsolutePath, m_scrapePair.Url.Authority))).AbsolutePath
 				: (new Uri(Path.Combine(Path.GetTempPath(), AppDomain.CurrentDomain.FriendlyName, Path.GetRandomFileName()))).AbsolutePath;
@@ -97,13 +96,13 @@ namespace SiteScraper
 		{
 			try
 			{
-				int depth = 0;
-				string dataPath = null;
+				int depth;
+				string dataPath;
 				if (url.AbsolutePath != "/")
 				{
 					string[] directory = url.AbsolutePath.Split('/').Where(x => x != "").ToArray();
 					depth = directory.Length;
-					dataPath = dataPath ?? "";
+					dataPath = "";
 					foreach (string dir in directory.Reverse().Skip(1).Reverse())
 					{
 						dataPath = Path.Combine(dataPath, dir);

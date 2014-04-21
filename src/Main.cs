@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.IO;
-using System.Linq;
 using CommandLine;
 using CommandLine.Text;
 
@@ -48,14 +47,9 @@ namespace SiteScraper
 						{
 							Uri url;
 							if (Uri.TryCreate(options.Urls[i], UriKind.Absolute, out url))
-							{
 								crawlQueue.Enqueue(new ScrapePair(url, output));
-							}
 							else
-							{
 								Console.Error.WriteLine("Your url '{0}' was of incorrect form.", options.Urls[i]);
-								continue;
-							}
 						}
 					}
 					else
@@ -107,15 +101,15 @@ namespace SiteScraper
 		public static void Start(ConcurrentQueue<ScrapePair> crawlQueue, bool isScraping)
 		{
 			Console.WriteLine("pwd:{0}", Directory.GetCurrentDirectory());
-			ScrapePair scrapePair;
 			while (!crawlQueue.IsEmpty)
 			{
+				ScrapePair scrapePair;
 				if (crawlQueue.TryDequeue(out scrapePair))
 				{
 					if (isScraping && !Directory.Exists(scrapePair.Path.AbsolutePath))
 					{
 						Console.Error.WriteLine("The following path doesn't exist: {0}", scrapePair.Path);
-						System.IO.Directory.CreateDirectory(scrapePair.Path.AbsolutePath);
+						Directory.CreateDirectory(scrapePair.Path.AbsolutePath);
 					}
 
 					// TODO(cm): Add support of other schemes (Issue ID: 1)
