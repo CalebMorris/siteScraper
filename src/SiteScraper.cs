@@ -35,9 +35,9 @@ namespace SiteScraper
 					basePath = scrapeFolder + "(" + (++duplicateCount).ToString() + ")";
 			}
 
-			Directory.CreateDirectory(basePath);
-
 			Console.CancelKeyPress += delegate { CleanUpDirectoryIfNecessary(basePath); };
+
+			Directory.CreateDirectory(basePath);
 
 			try
 			{
