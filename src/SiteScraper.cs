@@ -41,9 +41,10 @@ namespace SiteScraper
 
 			try
 			{
+				Uri root = null;
 				if (m_scrapePair.Url.AbsolutePath == "/")
 				{
-					Uri root = new Uri(Path.Combine(basePath, "base"));
+					root = new Uri(Path.Combine(basePath, "base"));
 					if (File.Exists(root.AbsolutePath))
 					{
 						Console.Error.WriteLine("File '{0}' already exists.", root.AbsolutePath);
@@ -57,7 +58,9 @@ namespace SiteScraper
 
 				m_directoryTree.AddLink(node);
 
-				List<string> resources = GetLinks(node.Path.AbsolutePath, 0);
+				if (root == null)
+					return;
+				List<string> resources = GetLinks(root, 0);
 
 				foreach (string resource in resources)
 				{
@@ -135,7 +138,14 @@ namespace SiteScraper
 					return;
 				}
 
-				List<string> resources = GetLinks(dataPath, depth);
+				Uri data;
+				if (!Uri.TryCreate(dataPath, UriKind.RelativeOrAbsolute, out data))
+				{
+					Console.Error.WriteLine("The path '{0}' is not well formed.", dataPath);
+					return;
+				}
+
+				List<string> resources = GetLinks(data, depth);
 
 				foreach (string resource in resources)
 				{
@@ -207,19 +217,15 @@ namespace SiteScraper
 				else
 					throw ex;
 			}
-			Uri newUri;
-			if (Uri.TryCreate(path, UriKind.Absolute, out newUri))
-				return new DirectoryTreeNode(newUri, status);
-			else
-				throw new UriFormatException("New path isn't a well formed URI.");
+			return new DirectoryTreeNode(url, status);
 		}
 
-		List<string> GetLinks(string urlData, int depth)
+		List<string> GetLinks(Uri urlData, int depth)
 		{
 			HtmlDocument doc = new HtmlDocument();
 			List<string> resources = new List<string>();
-			doc.Load(urlData);
-			if (doc.ParseErrors == null || doc.ParseErrors.Count() == 0)
+			doc.Load(urlData.AbsolutePath);
+			if (doc.ParseErrors == null || !doc.ParseErrors.Any())
 			{
 				if (doc.DocumentNode != null)
 				{
@@ -262,6 +268,8 @@ namespace SiteScraper
 					foreach (HtmlNode hyperLink in doc.DocumentNode.SelectNodes("//a[@href]").EmptyOrNotNull())
 					{
 						HtmlAttribute att = hyperLink.Attributes["href"];
+						if (att.Value.Length > 2 && att.Value.StartsWith("//"))
+							continue;
 						resources.Add(att.Value);
 						string attributeValue = att.Value;
 						IfNecessaryAppendHtml(ref attributeValue);
@@ -277,7 +285,7 @@ namespace SiteScraper
 						att.Value = attributeValue;
 						hyperLink.Attributes["href"] = att;
 					}
-					doc.Save(urlData);
+					doc.Save(urlData.AbsolutePath);
 				}
 			}
 			return resources;
