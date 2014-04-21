@@ -112,7 +112,7 @@ namespace SiteScraper
 			{
 				if (crawlQueue.TryDequeue(out scrapePair))
 				{
-					if (!Directory.Exists(scrapePair.Path.AbsolutePath))
+					if (isScraping && !Directory.Exists(scrapePair.Path.AbsolutePath))
 					{
 						Console.Error.WriteLine("The following path doesn't exist: {0}", scrapePair.Path);
 						System.IO.Directory.CreateDirectory(scrapePair.Path.AbsolutePath);
