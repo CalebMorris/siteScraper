@@ -22,14 +22,6 @@ namespace SiteScraper
 			m_nodes.Add(root);
 		}
 
-		public bool AddLink(DirectoryTreeNode node)
-		{
-			if (m_nodes.Contains(node))
-				return false;
-
-			return m_nodes.Add(node);
-		}
-
 		/// <summary>
 		/// Adds a new link to a current node.
 		/// </summary>
@@ -83,7 +75,7 @@ namespace SiteScraper
 		readonly SortedSet<DirectoryTreeNode> m_nodes;
 	}
 
-	sealed class DirectoryTreeNode
+	sealed class DirectoryTreeNode : IComparable
 	{
 		public DirectoryTreeNode(Uri path, HttpStatusCode status)
 		{
@@ -92,19 +84,22 @@ namespace SiteScraper
 			m_links = new Dictionary<string, DirectoryTreeNode>();
 		}
 
-		public override bool Equals(object obj)
+		int IComparable.CompareTo(object obj)
 		{
-			if (!(obj is DirectoryTreeNode))
-				return false;
-
 			DirectoryTreeNode otherNode = (DirectoryTreeNode) obj;
-
-			return (otherNode.Path == this.Path && otherNode.Status == this.Status);
-		}
-
-		public override int GetHashCode()
-		{
-			return (this.Path.AbsoluteUri + this.Status.ToString()).GetHashCode();
+			if (this.Path != otherNode.Path)
+			{
+				return Uri.Compare(this.Path, otherNode.Path, UriComponents.AbsoluteUri, UriFormat.UriEscaped, StringComparison.InvariantCulture);
+			}
+			else
+			{
+				if (this.Status < otherNode.Status)
+					return -1;
+				else if (this.Status > otherNode.Status)
+					return 1;
+				else
+					return 0;
+			}
 		}
 
 		public Uri Path { get { return m_path; } }

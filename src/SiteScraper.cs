@@ -56,7 +56,7 @@ namespace SiteScraper
 					}
 				}
 
-				m_directoryTree.AddLink(node);
+				DirectoryTreeNode directoryTreeNode = m_directoryTree.AddLink(null, node.Path.AbsoluteUri, node.Status);
 
 				if (root == null)
 					return;
@@ -70,7 +70,7 @@ namespace SiteScraper
 						string urlInput = string.Format("{0}{1}{2}{3}", m_scrapePair.Url.Scheme, Uri.SchemeDelimiter, m_scrapePair.Url.Authority, resource);
 						if (Uri.TryCreate(urlInput, UriKind.Absolute, out nextUrl))
 						{
-							Scrape(nextUrl, basePath);
+							Scrape(directoryTreeNode, nextUrl, basePath);
 						}
 						else
 						{
@@ -95,12 +95,14 @@ namespace SiteScraper
 			}
 		}
 
-		void Scrape(Uri url, string path)
+		void Scrape(DirectoryTreeNode current, Uri url, string path)
 		{
 			try
 			{
 				int depth;
 				string dataPath;
+				DirectoryTreeNode node = null;
+				DirectoryTreeNode directoryTreeNode = null;
 				if (url.AbsolutePath != "/")
 				{
 					string[] directory = url.AbsolutePath.Split('/').Where(x => x != "").ToArray();
@@ -129,8 +131,10 @@ namespace SiteScraper
 					{
 						if (filename.Split('.').Where(x => x != "").Last().StartsWith("htm"))
 							depth = directory.Length - 1;
-						GetUrl(url, dataPath);
+						node = GetUrl(url, dataPath);
 					}
+
+					directoryTreeNode = m_directoryTree.AddLink(current, node.Path.AbsoluteUri, node.Status);
 				}
 				else
 				{
@@ -155,7 +159,7 @@ namespace SiteScraper
 						string urlInput = string.Format("{0}{1}{2}{3}", url.Scheme, Uri.SchemeDelimiter, url.Authority, resource);
 						if (Uri.TryCreate(urlInput, UriKind.Absolute, out nextUrl))
 						{
-							Scrape(nextUrl, path);
+							Scrape(current, nextUrl, path);
 						}
 						else
 						{
@@ -224,69 +228,76 @@ namespace SiteScraper
 		{
 			HtmlDocument doc = new HtmlDocument();
 			List<string> resources = new List<string>();
-			doc.Load(urlData.AbsolutePath);
-			if (doc.ParseErrors == null || !doc.ParseErrors.Any())
+			try
 			{
-				if (doc.DocumentNode != null)
+				doc.Load(urlData.AbsolutePath);
+				if (doc.ParseErrors == null || !doc.ParseErrors.Any())
 				{
-					foreach (HtmlNode link in doc.DocumentNode.SelectNodes("//link[@href]").EmptyOrNotNull())
+					if (doc.DocumentNode != null)
 					{
-						HtmlAttribute att = link.Attributes["href"];
-						resources.Add(att.Value);
-						string attributeValue = att.Value;
-						IfNecessaryAppendHtml(ref attributeValue);
-						if (attributeValue.ToCharArray().First() == '/')
+						foreach (HtmlNode link in doc.DocumentNode.SelectNodes("//link[@href]").EmptyOrNotNull())
 						{
-							string prependDepth = ".";
-							for (int i = 0; i < depth; ++i)
+							HtmlAttribute att = link.Attributes["href"];
+							resources.Add(att.Value);
+							string attributeValue = att.Value;
+							IfNecessaryAppendHtml(ref attributeValue);
+							if (attributeValue.ToCharArray().First() == '/')
 							{
-								prependDepth += "/..";
+								string prependDepth = ".";
+								for (int i = 0; i < depth; ++i)
+								{
+									prependDepth += "/..";
+								}
+								attributeValue = string.Format("{1}{0}", attributeValue, prependDepth);
 							}
-							attributeValue = string.Format("{1}{0}", attributeValue, prependDepth);
+							att.Value = attributeValue;
+							link.Attributes["href"] = att;
 						}
-						att.Value = attributeValue;
-						link.Attributes["href"] = att;
-					}
-					foreach (HtmlNode imgLink in doc.DocumentNode.SelectNodes("//img[@src]").EmptyOrNotNull())
-					{
-						HtmlAttribute att = imgLink.Attributes["src"];
-						resources.Add(att.Value);
-						string attributeValue = att.Value;
-						IfNecessaryAppendHtml(ref attributeValue);
-						if (attributeValue.ToCharArray().First() == '/')
+						foreach (HtmlNode imgLink in doc.DocumentNode.SelectNodes("//img[@src]").EmptyOrNotNull())
 						{
-							string prependDepth = ".";
-							for (int i = 0; i < depth; ++i)
+							HtmlAttribute att = imgLink.Attributes["src"];
+							resources.Add(att.Value);
+							string attributeValue = att.Value;
+							IfNecessaryAppendHtml(ref attributeValue);
+							if (attributeValue.ToCharArray().First() == '/')
 							{
-								prependDepth += "/..";
+								string prependDepth = ".";
+								for (int i = 0; i < depth; ++i)
+								{
+									prependDepth += "/..";
+								}
+								attributeValue = string.Format("{1}{0}", attributeValue, prependDepth);
 							}
-							attributeValue = string.Format("{1}{0}", attributeValue, prependDepth);
+							att.Value = attributeValue;
+							imgLink.Attributes["src"] = att;
 						}
-						att.Value = attributeValue;
-						imgLink.Attributes["src"] = att;
-					}
-					foreach (HtmlNode hyperLink in doc.DocumentNode.SelectNodes("//a[@href]").EmptyOrNotNull())
-					{
-						HtmlAttribute att = hyperLink.Attributes["href"];
-						if (att.Value.Length > 2 && att.Value.StartsWith("//"))
-							continue;
-						resources.Add(att.Value);
-						string attributeValue = att.Value;
-						IfNecessaryAppendHtml(ref attributeValue);
-						if (attributeValue.ToCharArray().First() == '/')
+						foreach (HtmlNode hyperLink in doc.DocumentNode.SelectNodes("//a[@href]").EmptyOrNotNull())
 						{
-							string prependDepth = ".";
-							for (int i = 0; i < depth; ++i)
+							HtmlAttribute att = hyperLink.Attributes["href"];
+							if (att.Value.Length > 2 && att.Value.StartsWith("//"))
+								continue;
+							resources.Add(att.Value);
+							string attributeValue = att.Value;
+							IfNecessaryAppendHtml(ref attributeValue);
+							if (attributeValue.ToCharArray().First() == '/')
 							{
-								prependDepth += "/..";
+								string prependDepth = ".";
+								for (int i = 0; i < depth; ++i)
+								{
+									prependDepth += "/..";
+								}
+								attributeValue = string.Format("{1}{0}", attributeValue, prependDepth);
 							}
-							attributeValue = string.Format("{1}{0}", attributeValue, prependDepth);
+							att.Value = attributeValue;
+							hyperLink.Attributes["href"] = att;
 						}
-						att.Value = attributeValue;
-						hyperLink.Attributes["href"] = att;
+						doc.Save(urlData.AbsolutePath);
 					}
-					doc.Save(urlData.AbsolutePath);
 				}
+			}
+			catch (IOException ex)
+			{
+				Console.WriteLine("'{0}' threw an error {1}", urlData.AbsoluteUri, ex.Message);
 			}
 			return resources;
 		}
