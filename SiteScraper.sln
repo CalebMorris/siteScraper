@@ -1,7 +1,7 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2010
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SiteScraper", "src\SiteScraper.csproj", "{C53D4C2B-D2BA-4C9D-8C72-A295B96515E1}"
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Express 2012 for Windows Desktop
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SiteScraperCL", "src\SiteScraperCL\SiteScraperCL.csproj", "{C53D4C2B-D2BA-4C9D-8C72-A295B96515E1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -13,6 +13,9 @@ Global
 		{C53D4C2B-D2BA-4C9D-8C72-A295B96515E1}.Debug|x86.Build.0 = Debug|x86
 		{C53D4C2B-D2BA-4C9D-8C72-A295B96515E1}.Release|x86.ActiveCfg = Release|x86
 		{C53D4C2B-D2BA-4C9D-8C72-A295B96515E1}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
 		StartupItem = src\SiteScraper.csproj
