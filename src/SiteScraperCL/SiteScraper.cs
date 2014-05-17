@@ -1,9 +1,10 @@
+using HtmlAgilityPack;
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
-using System.Collections.Generic;
-using HtmlAgilityPack;
-using System.IO;
 
 namespace SiteScraper
 {
@@ -94,6 +95,39 @@ namespace SiteScraper
 				CleanUpDirectoryIfNecessary(basePath);
 			}
 		}
+
+		public static void Start(ConcurrentQueue<ScrapePair> crawlQueue, bool isScraping)
+		{
+			Console.WriteLine("pwd:{0}", Directory.GetCurrentDirectory());
+			while (!crawlQueue.IsEmpty)
+			{
+				ScrapePair scrapePair;
+				if (crawlQueue.TryDequeue(out scrapePair))
+				{
+					if (isScraping && !Directory.Exists(scrapePair.Path.AbsolutePath))
+					{
+						Console.Error.WriteLine("The following path doesn't exist: {0}", scrapePair.Path);
+						Directory.CreateDirectory(scrapePair.Path.AbsolutePath);
+					}
+
+					// TODO(cm): Add support of other schemes (Issue ID: 1)
+					if (scrapePair.Url.Scheme != Uri.UriSchemeHttp)
+					{
+						Console.Error.WriteLine("Scheme Not Supported: uri '{0}' is not of the HTTP scheme.", scrapePair.Url.AbsoluteUri);
+						continue;
+					}
+
+					SiteScraper scraper = new SiteScraper(scrapePair, isScraping);
+					scraper.Scrape();
+				}
+				else
+				{
+					Console.Error.WriteLine("Unable to dequeue the next site.");
+					Environment.Exit(-1);
+				}
+			}
+		}
+
 
 		void Scrape(DirectoryTreeNode current, Uri url, string path)
 		{

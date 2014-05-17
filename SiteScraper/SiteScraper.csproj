@@ -57,5 +57,11 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\src\SiteScraperCL\SiteScraperCL.csproj">
+      <Project>{c53d4c2b-d2ba-4c9d-8c72-a295b96515e1}</Project>
+      <Name>SiteScraperCL</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

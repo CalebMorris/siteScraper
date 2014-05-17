@@ -11,6 +11,8 @@ public sealed class MainWindow: Gtk.Window
 			{
 				m_urlEntry = new Entry("http://www.google.com");
 				{
+					m_urlEntry.Changed += OnUrlEntryChanged;
+
 					hbox.PackStart(m_urlEntry, true, true, 4);
 				}
 
@@ -62,13 +64,33 @@ public sealed class MainWindow: Gtk.Window
 		this.ShowAll();
 	}
 
+	void OnUrlEntryChanged(object sender, EventArgs e)
+	{
+		if (m_isUrlIncorrect)
+		{
+			m_urlEntry.ModifyText(StateType.Normal, s_normalUrlColor);
+			m_urlEntry.TooltipText = string.Empty;
+			m_isUrlIncorrect = false;
+		}
+	}
+
 	void OnStartButtonClicked(object sender, EventArgs e)
 	{
 		if (!m_isProcessing)
 		{
-			m_urlEntry.Sensitive = false;
-			m_startButton.Label = c_cancelButtonText;
-			m_isProcessing = true;
+			Uri url;
+			if (Uri.TryCreate(m_urlEntry.Text, UriKind.Absolute, out url))
+			{
+				m_urlEntry.Sensitive = false;
+				m_startButton.Label = c_cancelButtonText;
+				m_isProcessing = true;
+			}
+			else
+			{
+				m_urlEntry.ModifyText(StateType.Normal, s_incorrectUrlColor);
+				m_urlEntry.TooltipText = c_urlErrorTooltipText;
+				m_isUrlIncorrect = true;
+			}
 		}
 		else
 		{
@@ -86,8 +108,13 @@ public sealed class MainWindow: Gtk.Window
 
 	const string c_cancelButtonText = "Cancel";
 	const string c_startButtonText = "Crawl";
+	const string c_urlErrorTooltipText = "Incorrect Url format. Please try Again.";
+
+	static Gdk.Color s_incorrectUrlColor = new Gdk.Color(255, 0, 0);
+	static Gdk.Color s_normalUrlColor = new Gdk.Color(0, 0, 0);
 
 	bool m_isProcessing;
+	bool m_isUrlIncorrect;
 
 	Entry m_urlEntry;
 	Button m_startButton;
