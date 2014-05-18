@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using HtmlAgilityPack;
 
-namespace SiteScraper
+namespace LibSiteScraper
 {
 	public static class HtmlAgilityPackUtility
 	{

@@ -1,10 +1,15 @@
 using System;
 using Gtk;
+using System.Collections.Concurrent;
+using SiteScraper;
+using LibSiteScraper;
 
 public sealed class MainWindow: Gtk.Window
 {
 	public MainWindow() : base(Gtk.WindowType.Toplevel)
 	{
+		m_queue = new ConcurrentQueue<ScrapePair>();
+
 		VBox vbox = new VBox();
 		{
 			HBox hbox = new HBox();
@@ -84,6 +89,9 @@ public sealed class MainWindow: Gtk.Window
 				m_urlEntry.Sensitive = false;
 				m_startButton.Label = c_cancelButtonText;
 				m_isProcessing = true;
+
+				m_queue.Enqueue(new ScrapePair(url, null));
+				LibSiteScraper.SiteScraper.Start(null, false);
 			}
 			else
 			{
@@ -112,6 +120,8 @@ public sealed class MainWindow: Gtk.Window
 
 	static Gdk.Color s_incorrectUrlColor = new Gdk.Color(255, 0, 0);
 	static Gdk.Color s_normalUrlColor = new Gdk.Color(0, 0, 0);
+
+	ConcurrentQueue<ScrapePair> m_queue;
 
 	bool m_isProcessing;
 	bool m_isUrlIncorrect;

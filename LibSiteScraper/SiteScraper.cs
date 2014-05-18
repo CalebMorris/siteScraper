@@ -6,7 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 
-namespace SiteScraper
+namespace LibSiteScraper
 {
 	public sealed class SiteScraper
 	{

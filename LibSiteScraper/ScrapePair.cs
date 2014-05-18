@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SiteScraper
+namespace LibSiteScraper
 {
 	public sealed class ScrapePair
 	{

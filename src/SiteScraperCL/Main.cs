@@ -2,8 +2,9 @@ using System;
 using System.Collections.Concurrent;
 using CommandLine;
 using CommandLine.Text;
+using LibSiteScraper;
 
-namespace SiteScraper
+namespace SiteScraperCL
 {
 	public class MainClass
 	{

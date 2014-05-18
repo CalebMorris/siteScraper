@@ -5,6 +5,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SiteScraperCL", "src\SiteSc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SiteScraper", "SiteScraper\SiteScraper.csproj", "{17E36ACA-1AA8-4111-9334-01B0DA7FCEAD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibSiteScraper", "LibSiteScraper\LibSiteScraper.csproj", "{CE06FC49-0D68-406C-AB59-E15B21056AB2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -37,9 +39,21 @@ Global
 		{C53D4C2B-D2BA-4C9D-8C72-A295B96515E1}.Release|Mixed Platforms.Build.0 = Release|x86
 		{C53D4C2B-D2BA-4C9D-8C72-A295B96515E1}.Release|x86.ActiveCfg = Release|x86
 		{C53D4C2B-D2BA-4C9D-8C72-A295B96515E1}.Release|x86.Build.0 = Release|x86
+		{CE06FC49-0D68-406C-AB59-E15B21056AB2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CE06FC49-0D68-406C-AB59-E15B21056AB2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CE06FC49-0D68-406C-AB59-E15B21056AB2}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{CE06FC49-0D68-406C-AB59-E15B21056AB2}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{CE06FC49-0D68-406C-AB59-E15B21056AB2}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{CE06FC49-0D68-406C-AB59-E15B21056AB2}.Debug|x86.Build.0 = Debug|Any CPU
+		{CE06FC49-0D68-406C-AB59-E15B21056AB2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CE06FC49-0D68-406C-AB59-E15B21056AB2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CE06FC49-0D68-406C-AB59-E15B21056AB2}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{CE06FC49-0D68-406C-AB59-E15B21056AB2}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{CE06FC49-0D68-406C-AB59-E15B21056AB2}.Release|x86.ActiveCfg = Release|Any CPU
+		{CE06FC49-0D68-406C-AB59-E15B21056AB2}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
-		StartupItem = src\SiteScraperCL\SiteScraperCL.csproj
+		StartupItem = SiteScraper\SiteScraper.csproj
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
