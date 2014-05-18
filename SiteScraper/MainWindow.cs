@@ -3,12 +3,16 @@ using Gtk;
 using System.Collections.Concurrent;
 using SiteScraper;
 using LibSiteScraper;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
 public sealed class MainWindow: Gtk.Window
 {
 	public MainWindow() : base(Gtk.WindowType.Toplevel)
 	{
 		m_queue = new ConcurrentQueue<ScrapePair>();
+		m_tokenSource = new CancellationTokenSource();
 
 		VBox vbox = new VBox();
 		{
@@ -50,12 +54,12 @@ public sealed class MainWindow: Gtk.Window
 					treeview.AppendColumn(colOne);
 				}
 
-				ListStore tmpStore = new ListStore(typeof(string));
+				m_listStore = new ListStore(typeof(string));
 				{
-					tmpStore.AppendValues("test1");
-					tmpStore.AppendValues("test2");
+					m_listStore.AppendValues("test1");
+					m_listStore.AppendValues("test2");
 
-					treeview.Model = tmpStore;
+					treeview.Model = m_listStore;
 				}
 
 				vbox.Add(treeview);
@@ -83,6 +87,9 @@ public sealed class MainWindow: Gtk.Window
 	{
 		if (!m_isProcessing)
 		{
+			m_tokenSource.Dispose();
+			m_tokenSource = new CancellationTokenSource();
+			m_listStore.Clear();
 			Uri url;
 			if (Uri.TryCreate(m_urlEntry.Text, UriKind.Absolute, out url))
 			{
@@ -91,7 +98,7 @@ public sealed class MainWindow: Gtk.Window
 				m_isProcessing = true;
 
 				m_queue.Enqueue(new ScrapePair(url, null));
-				LibSiteScraper.SiteScraper.Start(null, false);
+				DoWork();
 			}
 			else
 			{
@@ -105,6 +112,7 @@ public sealed class MainWindow: Gtk.Window
 			m_urlEntry.Sensitive = true;
 			m_startButton.Label = c_startButtonText;
 			m_isProcessing = false;
+			m_tokenSource.Cancel();
 		}
 	}
 
@@ -112,6 +120,54 @@ public sealed class MainWindow: Gtk.Window
 	{
 		Application.Quit();
 		a.RetVal = true;
+	}
+
+	void ProcessingExploredLink(int newLink)
+	{
+		m_listStore.AppendValues(newLink.ToString());
+	}
+
+	async void DoWork()
+	{
+		await testFn(ProcessingExploredLink, m_tokenSource.Token);
+		/*
+		Console.WriteLine("Callback Triggered");
+
+		SynchronizationContext syncContext = SynchronizationContext.Current;
+		if (syncContext != null)
+		{
+			ThreadPool.QueueUserWorkItem(delegate
+			{
+				////LibSiteScraper.SiteScraper.Start(m_queue, false);
+				syncContext.Post(delegate
+				{
+					
+				}, null);
+			});
+		}
+		else
+		{
+			Console.WriteLine("Context was null");
+			throw new NotImplementedException();
+		}
+		*/
+	}
+
+	static async Task testFn(Action<int> onItemCompletion, CancellationToken token)
+	{
+		await Task.Delay(2000);
+		if (token.IsCancellationRequested)
+			return;
+		onItemCompletion(0);
+		await Task.Delay(2000);
+		if (token.IsCancellationRequested)
+			return;
+		for (int i = 1; i < 10000; ++i)
+		{
+			if (token.IsCancellationRequested)
+				return;
+			onItemCompletion(i);
+		}
 	}
 
 	const string c_cancelButtonText = "Cancel";
@@ -122,10 +178,11 @@ public sealed class MainWindow: Gtk.Window
 	static Gdk.Color s_normalUrlColor = new Gdk.Color(0, 0, 0);
 
 	ConcurrentQueue<ScrapePair> m_queue;
+	CancellationTokenSource m_tokenSource;
+	ListStore m_listStore;
+	Entry m_urlEntry;
+	Button m_startButton;
 
 	bool m_isProcessing;
 	bool m_isUrlIncorrect;
-
-	Entry m_urlEntry;
-	Button m_startButton;
 }
