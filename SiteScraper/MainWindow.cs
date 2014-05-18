@@ -38,31 +38,36 @@ public sealed class MainWindow: Gtk.Window
 				vbox.PackStart(hbox, false, true, 8);
 			}
 
-			TreeView treeview = new TreeView();
+			ScrolledWindow scrolledWindow = new ScrolledWindow();
 			{
-				treeview.SetSizeRequest(200, 200);
-				treeview.HeadersVisible = false;
-
-				TreeViewColumn colOne = new TreeViewColumn();
+				TreeView treeview = new TreeView();
 				{
-					CellRendererText cellRendererText = new CellRendererText();
+					treeview.SetSizeRequest(200, 200);
+					treeview.HeadersVisible = false;
+
+					TreeViewColumn colOne = new TreeViewColumn();
 					{
-						colOne.PackStart(cellRendererText, true);
-						colOne.AddAttribute(cellRendererText, "text", 0);
+						CellRendererText cellRendererText = new CellRendererText();
+						{
+							colOne.PackStart(cellRendererText, true);
+							colOne.AddAttribute(cellRendererText, "text", 0);
+						}
+
+						treeview.AppendColumn(colOne);
 					}
 
-					treeview.AppendColumn(colOne);
+					m_listStore = new ListStore(typeof(string));
+					{
+						m_listStore.AppendValues("test1");
+						m_listStore.AppendValues("test2");
+
+						treeview.Model = m_listStore;
+					}
+
+					scrolledWindow.Add(treeview);
 				}
 
-				m_listStore = new ListStore(typeof(string));
-				{
-					m_listStore.AppendValues("test1");
-					m_listStore.AppendValues("test2");
-
-					treeview.Model = m_listStore;
-				}
-
-				vbox.Add(treeview);
+				vbox.Add(scrolledWindow);
 			}
 
 			this.Add(vbox);
