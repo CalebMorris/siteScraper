@@ -127,52 +127,14 @@ public sealed class MainWindow: Gtk.Window
 		a.RetVal = true;
 	}
 
-	void ProcessingExploredLink(int newLink)
+	void ProcessingExploredLink(string newLink)
 	{
-		m_listStore.AppendValues(newLink.ToString());
+		m_listStore.AppendValues(newLink);
 	}
 
 	async void DoWork()
 	{
-		await testFn(ProcessingExploredLink, m_tokenSource.Token);
-		/*
-		Console.WriteLine("Callback Triggered");
-
-		SynchronizationContext syncContext = SynchronizationContext.Current;
-		if (syncContext != null)
-		{
-			ThreadPool.QueueUserWorkItem(delegate
-			{
-				////LibSiteScraper.SiteScraper.Start(m_queue, false);
-				syncContext.Post(delegate
-				{
-					
-				}, null);
-			});
-		}
-		else
-		{
-			Console.WriteLine("Context was null");
-			throw new NotImplementedException();
-		}
-		*/
-	}
-
-	static async Task testFn(Action<int> onItemCompletion, CancellationToken token)
-	{
-		await Task.Delay(2000);
-		if (token.IsCancellationRequested)
-			return;
-		onItemCompletion(0);
-		await Task.Delay(2000);
-		if (token.IsCancellationRequested)
-			return;
-		for (int i = 1; i < 10000; ++i)
-		{
-			if (token.IsCancellationRequested)
-				return;
-			onItemCompletion(i);
-		}
+		await LibSiteScraper.SiteScraper.Start(m_queue, ProcessingExploredLink, false, m_tokenSource.Token);
 	}
 
 	const string c_cancelButtonText = "Cancel";
