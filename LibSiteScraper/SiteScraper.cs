@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace LibSiteScraper
 {
@@ -17,8 +19,11 @@ namespace LibSiteScraper
 			m_directoryTree = new DirectoryTree();
 		}
 
-		public void Scrape()
+		public async Task Scrape(Action<string> onNewLinkFound, CancellationToken token)
 		{
+			if (token.IsCancellationRequested)
+				return;
+
 			DirectoryTreeNode node = null;
 			string scrapeFolder = m_isScraping
 				? (new Uri(Path.Combine(m_scrapePair.Path.AbsolutePath, m_scrapePair.Url.Authority))).AbsolutePath
@@ -53,10 +58,11 @@ namespace LibSiteScraper
 					}
 					else
 					{
-						node = GetUrl(m_scrapePair.Url, root.AbsolutePath);
+						node = await GetUrl(m_scrapePair.Url, root.AbsolutePath);
 					}
 				}
 
+				onNewLinkFound(node.Path.AbsoluteUri);
 				DirectoryTreeNode directoryTreeNode = m_directoryTree.AddLink(null, node.Path.AbsoluteUri, node.Status);
 
 				if (root == null)
@@ -71,7 +77,7 @@ namespace LibSiteScraper
 						string urlInput = string.Format("{0}{1}{2}{3}", m_scrapePair.Url.Scheme, Uri.SchemeDelimiter, m_scrapePair.Url.Authority, resource);
 						if (Uri.TryCreate(urlInput, UriKind.Absolute, out nextUrl))
 						{
-							Scrape(directoryTreeNode, nextUrl, basePath);
+							await Scrape(onNewLinkFound, token, directoryTreeNode, nextUrl, basePath);
 						}
 						else
 						{
@@ -96,7 +102,7 @@ namespace LibSiteScraper
 			}
 		}
 
-		public static void Start(ConcurrentQueue<ScrapePair> crawlQueue, bool isScraping)
+		public static async Task Start(ConcurrentQueue<ScrapePair> crawlQueue, Action<string> onNewLinkFound, bool isScraping, CancellationToken token)
 		{
 			Console.WriteLine("pwd:{0}", Directory.GetCurrentDirectory());
 			while (!crawlQueue.IsEmpty)
@@ -118,7 +124,7 @@ namespace LibSiteScraper
 					}
 
 					SiteScraper scraper = new SiteScraper(scrapePair, isScraping);
-					scraper.Scrape();
+					await scraper.Scrape(onNewLinkFound, token);
 				}
 				else
 				{
@@ -129,8 +135,11 @@ namespace LibSiteScraper
 		}
 
 
-		void Scrape(DirectoryTreeNode current, Uri url, string path)
+		async Task Scrape(Action<string> onNewLinkFound, CancellationToken token, DirectoryTreeNode current, Uri url, string path)
 		{
+			if (token.IsCancellationRequested)
+				return;
+
 			try
 			{
 				int depth;
@@ -165,9 +174,10 @@ namespace LibSiteScraper
 					{
 						if (filename.Split('.').Where(x => x != "").Last().StartsWith("htm"))
 							depth = directory.Length - 1;
-						node = GetUrl(url, dataPath);
+						node = await GetUrl(url, dataPath);
 					}
 
+					onNewLinkFound(node.Path.AbsoluteUri);
 					directoryTreeNode = m_directoryTree.AddLink(current, node.Path.AbsoluteUri, node.Status);
 				}
 				else
@@ -193,7 +203,7 @@ namespace LibSiteScraper
 						string urlInput = string.Format("{0}{1}{2}{3}", url.Scheme, Uri.SchemeDelimiter, url.Authority, resource);
 						if (Uri.TryCreate(urlInput, UriKind.Absolute, out nextUrl))
 						{
-							Scrape(current, nextUrl, path);
+							Scrape(onNewLinkFound, token, current, nextUrl, path);
 						}
 						else
 						{
@@ -218,7 +228,7 @@ namespace LibSiteScraper
 			}
 		}
 
-		DirectoryTreeNode GetUrl(Uri url, string path)
+		async Task<DirectoryTreeNode> GetUrl(Uri url, string path)
 		{
 			HttpStatusCode status;
 			HttpWebResponse response;
@@ -226,7 +236,7 @@ namespace LibSiteScraper
 			{
 				HttpWebRequest request = HttpWebRequest.Create(url) as HttpWebRequest;
 				request.UserAgent = "TurtleSpider/0.1";
-				using (response = request.GetResponse() as HttpWebResponse)
+				using (response = await request.GetResponseAsync() as HttpWebResponse)
 				{
 					status = response.StatusCode;
 					if (response.StatusCode == HttpStatusCode.OK)
