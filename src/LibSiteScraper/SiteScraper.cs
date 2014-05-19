@@ -203,7 +203,7 @@ namespace LibSiteScraper
 						string urlInput = string.Format("{0}{1}{2}{3}", url.Scheme, Uri.SchemeDelimiter, url.Authority, resource);
 						if (Uri.TryCreate(urlInput, UriKind.Absolute, out nextUrl))
 						{
-							Scrape(onNewLinkFound, token, current, nextUrl, path);
+							await Scrape(onNewLinkFound, token, current, nextUrl, path);
 						}
 						else
 						{

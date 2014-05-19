@@ -4,15 +4,12 @@ using System.Collections.Concurrent;
 using SiteScraper;
 using LibSiteScraper;
 using System.Threading;
-using System.Threading.Tasks;
-using System.Collections.Generic;
 
 public sealed class MainWindow: Gtk.Window
 {
 	public MainWindow() : base(Gtk.WindowType.Toplevel)
 	{
-		m_queue = new ConcurrentQueue<ScrapePair>();
-		m_tokenSource = new CancellationTokenSource();
+		m_scrapeViewModel = new ScrapeViewModel();
 
 		VBox vbox = new VBox();
 		{
@@ -38,36 +35,35 @@ public sealed class MainWindow: Gtk.Window
 				vbox.PackStart(hbox, false, true, 8);
 			}
 
-			ScrolledWindow scrolledWindow = new ScrolledWindow();
+			Notebook notebook = new Notebook();
 			{
-				TreeView treeview = new TreeView();
+				ScrolledWindow scrolledWindow = new ScrolledWindow();
 				{
-					treeview.SetSizeRequest(200, 200);
-					treeview.HeadersVisible = false;
-
-					TreeViewColumn colOne = new TreeViewColumn();
+					TreeView treeview = new TreeView();
 					{
-						CellRendererText cellRendererText = new CellRendererText();
+						treeview.SetSizeRequest(200, 200);
+						treeview.HeadersVisible = false;
+
+						TreeViewColumn colOne = new TreeViewColumn();
 						{
-							colOne.PackStart(cellRendererText, true);
-							colOne.AddAttribute(cellRendererText, "text", 0);
+							CellRendererText cellRendererText = new CellRendererText();
+							{
+								colOne.PackStart(cellRendererText, true);
+								colOne.AddAttribute(cellRendererText, "text", 0);
+							}
+
+							treeview.AppendColumn(colOne);
 						}
 
-						treeview.AppendColumn(colOne);
+						treeview.Model = m_scrapeViewModel.ExploredLinks;
+
+						scrolledWindow.Add(treeview);
 					}
 
-					m_listStore = new ListStore(typeof(string));
-					{
-						m_listStore.AppendValues("test1");
-						m_listStore.AppendValues("test2");
-
-						treeview.Model = m_listStore;
-					}
-
-					scrolledWindow.Add(treeview);
+					notebook.AppendPage(scrolledWindow, new Label("Explored Link"));
 				}
 
-				vbox.Add(scrolledWindow);
+				vbox.Add(notebook);
 			}
 
 			this.Add(vbox);
@@ -80,44 +76,34 @@ public sealed class MainWindow: Gtk.Window
 
 	void OnUrlEntryChanged(object sender, EventArgs e)
 	{
-		if (m_isUrlIncorrect)
+		if (!m_scrapeViewModel.IsUrlWellFormed)
 		{
 			m_urlEntry.ModifyText(StateType.Normal, s_normalUrlColor);
 			m_urlEntry.TooltipText = string.Empty;
-			m_isUrlIncorrect = false;
 		}
 	}
 
 	void OnStartButtonClicked(object sender, EventArgs e)
 	{
-		if (!m_isProcessing)
+		if (!m_scrapeViewModel.IsProcessing)
 		{
-			m_tokenSource.Dispose();
-			m_tokenSource = new CancellationTokenSource();
-			m_listStore.Clear();
-			Uri url;
-			if (Uri.TryCreate(m_urlEntry.Text, UriKind.Absolute, out url))
+			m_scrapeViewModel.ExploredLinks.Clear();
+			if (m_scrapeViewModel.StartScraping(m_urlEntry.Text))
 			{
 				m_urlEntry.Sensitive = false;
 				m_startButton.Label = c_cancelButtonText;
-				m_isProcessing = true;
-
-				m_queue.Enqueue(new ScrapePair(url, null));
-				DoWork();
 			}
 			else
 			{
 				m_urlEntry.ModifyText(StateType.Normal, s_incorrectUrlColor);
 				m_urlEntry.TooltipText = c_urlErrorTooltipText;
-				m_isUrlIncorrect = true;
 			}
 		}
 		else
 		{
 			m_urlEntry.Sensitive = true;
 			m_startButton.Label = c_startButtonText;
-			m_isProcessing = false;
-			m_tokenSource.Cancel();
+			m_scrapeViewModel.Cancel();
 		}
 	}
 
@@ -127,16 +113,6 @@ public sealed class MainWindow: Gtk.Window
 		a.RetVal = true;
 	}
 
-	void ProcessingExploredLink(string newLink)
-	{
-		m_listStore.AppendValues(newLink);
-	}
-
-	async void DoWork()
-	{
-		await LibSiteScraper.SiteScraper.Start(m_queue, ProcessingExploredLink, false, m_tokenSource.Token);
-	}
-
 	const string c_cancelButtonText = "Cancel";
 	const string c_startButtonText = "Crawl";
 	const string c_urlErrorTooltipText = "Incorrect Url format. Please try Again.";
@@ -144,12 +120,8 @@ public sealed class MainWindow: Gtk.Window
 	static Gdk.Color s_incorrectUrlColor = new Gdk.Color(255, 0, 0);
 	static Gdk.Color s_normalUrlColor = new Gdk.Color(0, 0, 0);
 
-	ConcurrentQueue<ScrapePair> m_queue;
-	CancellationTokenSource m_tokenSource;
-	ListStore m_listStore;
+	ScrapeViewModel m_scrapeViewModel;
+
 	Entry m_urlEntry;
 	Button m_startButton;
-
-	bool m_isProcessing;
-	bool m_isUrlIncorrect;
 }
